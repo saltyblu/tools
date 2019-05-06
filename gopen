@@ -1,0 +1,73 @@
+#!/bin/bash
+
+_BROWSER=
+
+get_os() {
+    if uname -a | grep Darwin &>/dev/null; then
+        _BROWSER=open
+    else
+        _BROWSER=chromium
+    fi
+}
+
+usage() {
+    echo "$0 <help|edit|pipe|merge|setci|set_repo>"
+    echo "opens the weburl of pwd git in browser"
+    echo "Optional:"
+    echo "    edit:     opens gitlab edit page of git"
+    echo "    pipe:     opens gitlab pipeline page of git"
+    echo "    merge:    opens gitlab merge request of git"
+    echo "    setci:    opens gitlab git ci_cd settings "
+    echo "    set_repo: opens gitlab git repository settings"
+    echo "    help:     shows this usage"
+    echo "    ?:        shows this usage"
+    echo "Opts:"
+    echo "    -h,--help,-? shows this usage"
+    exit 1
+}
+
+if [ -n "$1" ]; then
+    case $1 in
+        "edit"|"pipelines"|"merge_request")
+            URLPREFIX="/$1"
+            ;;
+        "pipe")
+            URLPREFIX="/pipelines"
+            ;;
+        "merge")
+            URLPREFIX="/merge_requests"
+            ;;
+        "set_ci"|"setci")
+            URLPREFIX="/settings/ci_cd"
+            ;;
+        "set_repo"|"setrepo"|"setr")
+            URLPREFIX="/settings/repository"
+            ;;
+        "help"|"?"|"--help"|"-h"|"-?")
+            usage
+            ;;
+        *)
+            URLPREFIX=""
+            ;;
+    esac
+fi
+
+get_os
+
+if git remote &>/dev/null ; then
+  GITLAB_URL=$(git config --get remote.origin.url)
+  GIT_URL=${GITLAB_URL%\.git}
+  if [[ ! "$GIT_URL" =~ ^http* ]]; then
+    GIT_URL=${GIT_URL#git@}
+    GIT_URL=${GIT_URL/:/\/}
+  fi
+  SUBURL=${GIT_URL/*\//}
+  if [ -n "$SUBURL" ] && [[ "$GITLAB_URL" =~ "gitlab" ]]; then
+    URL="${GIT_URL}${URLPREFIX}"
+  else
+    URL="${GIT_URL}"
+  fi
+  $_BROWSER "$URL" & 2>/dev/null &
+else
+  echo "$PWD - Don't seems to be a git"
+fi
