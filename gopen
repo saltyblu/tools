@@ -1,12 +1,10 @@
 #!/bin/bash
 
-_BROWSER=
+_BROWSER=xdg-open
 
 get_os() {
     if uname -a | grep Darwin &>/dev/null; then
         _BROWSER=open
-    else
-        _BROWSER=chromium
     fi
 }
 
@@ -14,13 +12,12 @@ usage() {
     echo "$0 <help|edit|pipe|merge|setci|set_repo>"
     echo "opens the weburl of pwd git in browser"
     echo "Optional:"
-    echo "    edit:     opens gitlab edit page of git"
-    echo "    pipe:     opens gitlab pipeline page of git"
-    echo "    merge:    opens gitlab merge request of git"
-    echo "    setci:    opens gitlab git ci_cd settings "
-    echo "    set_repo: opens gitlab git repository settings"
-    echo "    help:     shows this usage"
-    echo "    ?:        shows this usage"
+    echo "    edit:      opens edit page of git"
+    echo "    pipe:      opens pipeline page of git"
+    echo "    merge:     opens merge request of git"
+    echo "    setci:     opens git ci_cd settings "
+    echo "    set_repo:  opens git repository settings"
+    echo "    help || ?: shows this usage"
     echo "Opts:"
     echo "    -h,--help,-? shows this usage"
     exit 1
@@ -67,7 +64,9 @@ if git remote &>/dev/null ; then
   else
     URL="${GIT_URL}"
   fi
-  $_BROWSER "$URL" & 2>/dev/null &
 else
   echo "$PWD - Don't seems to be a git"
+  exit 1
 fi
+
+$_BROWSER "$URL" & 2>/dev/null &
