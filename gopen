@@ -26,25 +26,30 @@ usage() {
 if [ -n "$1" ]; then
     case $1 in
         "edit"|"pipelines"|"merge_request")
-            URLPREFIX="/$1"
+            GL_URLPREFIX="/$1"
             ;;
-        "pipe")
-            URLPREFIX="/pipelines"
+        "pipe"|"cicd"|"actions")
+            GL_URLPREFIX="/pipelines"
+            GH_URLPREFIX="/actions"
             ;;
         "merge")
-            URLPREFIX="/merge_requests"
+            GL_URLPREFIX="/merge_requests"
+            GH_URLPREFIX="/pull"
             ;;
         "set_ci"|"setci")
-            URLPREFIX="/settings/ci_cd"
+            GL_URLPREFIX="/settings/ci_cd"
+            GH_URLPREFIX="settings/actions"
             ;;
         "set_repo"|"setrepo"|"setr")
-            URLPREFIX="/settings/repository"
+            GL_URLPREFIX="/settings/repository"
+            GH_URLPREFIX="/settings"
             ;;
         "help"|"?"|"--help"|"-h"|"-?")
             usage
             ;;
         *)
-            URLPREFIX=""
+            GH_URLPREFIX=""
+            GL_URLPREFIX=""
             ;;
     esac
 fi
@@ -60,13 +65,15 @@ if git remote &>/dev/null ; then
   fi
   SUBURL=${GIT_URL/*\//}
   if [ -n "$SUBURL" ] && [[ "$GITLAB_URL" =~ "gitlab" ]]; then
-    URL="${GIT_URL}${URLPREFIX}"
+    URL="https://${GIT_URL}${GL_URLPREFIX}"
+  elif [ -n "$SUBURL" ] && [[ "$GITLAB_URL" =~ "github" ]]; then
+    URL="https://${GIT_URL}${GH_URLPREFIX}"
   else
-    URL="${GIT_URL}"
+    URL="https://${GIT_URL}"
   fi
 else
   echo "$PWD - Don't seems to be a git"
   exit 1
 fi
 
-$_BROWSER "$URL" & 2>/dev/null &
+$_BROWSER "$URL" 2>/dev/null &
