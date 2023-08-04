@@ -2,22 +2,52 @@
 
 workflow_file=$1
 
-echo "|name|description|default|required|type|"
-echo "|-|-|-|-|:-|"
+generate_inputs() {
+    echo "## inputs"
+    echo "|name|description|default|required|type|"
+    echo "|-|-|-|-|:-|"
 
-for var_name in $(yq '.on.workflow_call.inputs | keys' < $workflow_file); do
-    if [[ "$var_name" == '[' || "$var_name" == ']' ]]; then continue; fi
-    var="${var_name/,/}"
-    var="${var//\"/}"
-    description=$(yq ".on.workflow_call.inputs[${var_name/,/}].description" < $workflow_file)
-    default=$(yq ".on.workflow_call.inputs[${var_name/,/}].default" < $workflow_file)
-    required=$(yq ".on.workflow_call.inputs[${var_name/,/}].required" < $workflow_file)
-    type=$(yq ".on.workflow_call.inputs[${var_name/,/}].type" < $workflow_file)
+    for var_name in $(yq '.on.workflow_call.inputs | keys' < $workflow_file); do
+        if [[ "$var_name" == '[' || "$var_name" == ']' ]]; then continue; fi
+        var="${var_name/,/}"
+        var="${var//\"/}"
+        description=$(yq ".on.workflow_call.inputs[${var_name/,/}].description" < $workflow_file)
+        default=$(yq ".on.workflow_call.inputs[${var_name/,/}].default" < $workflow_file)
+        required=$(yq ".on.workflow_call.inputs[${var_name/,/}].required" < $workflow_file)
+        type=$(yq ".on.workflow_call.inputs[${var_name/,/}].type" < $workflow_file)
 
-    if [[ "${description}" == "null" ]]; then description="n/a"; fi
-    if [[ "${default}" == "null" ]]; then default="-"; fi
-    if [[ "${required}" == "null" ]]; then required="false"; fi
-    if [[ "${type}" == "null" ]]; then type="string"; fi
+        if [[ "${description}" == "null" ]]; then description="n/a"; fi
+        if [[ "${default}" == "null" ]]; then default="-"; fi
+        if [[ "${required}" == "null" ]]; then required="false"; fi
+        if [[ "${type}" == "null" ]]; then type="string"; fi
 
-    echo "| \`$var\` | $description | \`${default//\"/}\` | $required |$type|"
-done
+        echo "| \`$var\` | $description | \`${default//\"/}\` | $required |$type|"
+    done
+}
+
+generate_secrets() {
+    echo "## secrets"
+    echo "|name|description|required|"
+    echo "|-|-|-|"
+
+    for var_name in $(yq '.on.workflow_call.secrets | keys' < $workflow_file); do
+        if [[ "$var_name" == '[' || "$var_name" == ']' ]]; then continue; fi
+        var="${var_name/,/}"
+        var="${var//\"/}"
+        description=$(yq ".on.workflow_call.secrets[${var_name/,/}].description" < $workflow_file)
+        required=$(yq ".on.workflow_call.secrets[${var_name/,/}].required" < $workflow_file)
+
+        if [[ "${description}" == "null" ]]; then description="n/a"; fi
+        if [[ "${required}" == "null" ]]; then required="false"; fi
+
+        echo "| \`$var\` | $description | $required |"
+    done
+}
+
+main() {
+    generate_inputs
+    echo
+    generate_secrets
+}
+
+main
