@@ -32,7 +32,7 @@ if [ -n "$1" ]; then
             GL_URLPREFIX="/pipelines"
             GH_URLPREFIX="/actions"
             ;;
-        "merge")
+        "merge"|"pulls"|"pull")
             GL_URLPREFIX="/merge_requests"
             GH_URLPREFIX="/pull"
             ;;
