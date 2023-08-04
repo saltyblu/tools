@@ -4,6 +4,7 @@ workflow_file=$1
 
 generate_inputs() {
     echo "## inputs"
+    echo
     echo "|name|description|default|required|type|"
     echo "|-|-|-|-|:-|"
 
@@ -23,10 +24,12 @@ generate_inputs() {
 
         echo "| \`$var\` | $description | \`${default//\"/}\` | $required |$type|"
     done
+    echo
 }
 
 generate_secrets() {
     echo "## secrets"
+    echo
     echo "|name|description|required|"
     echo "|-|-|-|"
 
@@ -42,12 +45,30 @@ generate_secrets() {
 
         echo "| \`$var\` | $description | $required |"
     done
+    echo
 }
+
+if [[ -z "$workflow_file" ]]; then
+    echo "no workflow_file given."
+    exit 1
+fi
 
 main() {
-    generate_inputs
-    echo
-    generate_secrets
+    local generate="${1}"
+
+    case "$generate" in
+        "inputs"|"input"|"i")
+            generate_inputs
+        ;;
+        "secrets"|"secret"|"s")
+            generate_secrets
+        ;;
+        *)
+            generate_inputs
+            generate_secrets
+        ;;
+    esac
+
 }
 
-main
+main "${2:-all}"
