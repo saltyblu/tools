@@ -1,21 +1,42 @@
 #!/bin/bash
 
-workflow_file=$1
+file=${1:?"No file given."}
+file_type=workflow
 
 generate_inputs() {
+    case "${file_type}" in
+        "workflow")
+            search_pattern='.on.workflow_call.inputs'
+        ;;
+        "action")
+            search_pattern='.inputs'
+        ;;
+
+        *)
+            echo "Unknown file type"
+            exit 0
+        ;;
+    esac
+
+
     echo "## inputs"
     echo
-    echo "|name|description|default|required|type|"
-    echo "|-|-|-|-|:-|"
+    if [[ $(yq $search_pattern < "$file") == "null" ]]; then
+        echo "Not defined."
+        return 0
+    else
+        echo "|name|description|default|required|type|"
+        echo "|-|-|-|-|:-|"
+    fi
 
-    for var_name in $(yq '.on.workflow_call.inputs | keys' < $workflow_file); do
+    for var_name in $(yq "${search_pattern} | keys" < $file); do
         if [[ "$var_name" == '[' || "$var_name" == ']' ]]; then continue; fi
         var="${var_name/,/}"
         var="${var//\"/}"
-        description=$(yq ".on.workflow_call.inputs[${var_name/,/}].description" < $workflow_file)
-        default=$(yq ".on.workflow_call.inputs[${var_name/,/}].default" < $workflow_file)
-        required=$(yq ".on.workflow_call.inputs[${var_name/,/}].required" < $workflow_file)
-        type=$(yq ".on.workflow_call.inputs[${var_name/,/}].type" < $workflow_file)
+        description=$(yq "${search_pattern}[${var_name/,/}].description" < $file)
+        default=$(yq "${search_pattern}[${var_name/,/}].default" < $file)
+        required=$(yq "${search_pattern}[${var_name/,/}].required" < $file)
+        type=$(yq "${search_pattern}[${var_name/,/}].type" < $file)
 
         if [[ "${description}" == "null" ]]; then description="n/a"; fi
         if [[ "${default}" == "null" ]]; then default="-"; fi
@@ -28,17 +49,27 @@ generate_inputs() {
 }
 
 generate_secrets() {
+    if [[ "${file_type}" != "workflow" ]]; then
+        return 0
+    fi
+
     echo "## secrets"
     echo
-    echo "|name|description|required|"
-    echo "|-|-|-|"
+    if [[ $(yq '.secrets' < "$file") == "null" ]]; then
+        echo "Not defined."
+        return 0
+    else
+        echo "|name|description|required|"
+        echo "|-|-|-|"
+    fi
 
-    for var_name in $(yq '.on.workflow_call.secrets | keys' < $workflow_file); do
+
+    for var_name in $(yq '.on.workflow_call.secrets | keys' < $file); do
         if [[ "$var_name" == '[' || "$var_name" == ']' ]]; then continue; fi
         var="${var_name/,/}"
         var="${var//\"/}"
-        description=$(yq ".on.workflow_call.secrets[${var_name/,/}].description" < $workflow_file)
-        required=$(yq ".on.workflow_call.secrets[${var_name/,/}].required" < $workflow_file)
+        description=$(yq ".on.workflow_call.secrets[${var_name/,/}].description" < $file)
+        required=$(yq ".on.workflow_call.secrets[${var_name/,/}].required" < $file)
 
         if [[ "${description}" == "null" ]]; then description="n/a"; fi
         if [[ "${required}" == "null" ]]; then required="false"; fi
@@ -48,12 +79,40 @@ generate_secrets() {
     echo
 }
 
-if [[ -z "$workflow_file" ]]; then
-    echo "no workflow_file given."
-    exit 1
-fi
+generate_outputs() {
+    if [[ "${file_type}" != "action" ]]; then
+        return 0
+    fi
+
+    echo "## outputs"
+    echo
+    if [[ $(yq '.outputs' < "$file") == "null" ]]; then
+        echo "Not defined."
+        return 0
+    else
+        echo "|name|description|"
+        echo "|-|-|"
+    fi
+
+    for var_name in $(yq '.outputs | keys' < $file); do
+        if [[ "$var_name" == '[' || "$var_name" == ']' ]]; then continue; fi
+        var="${var_name/,/}"
+        var="${var//\"/}"
+        description=$(yq ".outputs[${var_name/,/}].description" < $file)
+
+        if [[ "${description}" == "null" ]]; then description="n/a"; fi
+
+        echo "| \`$var\` | $description |"
+    done
+    echo
+
+}
 
 main() {
+    if [[ "$file" =~ action.yml ]]; then
+        file_type=action
+    fi
+
     local generate="${1}"
 
     case "$generate" in
@@ -63,12 +122,15 @@ main() {
         "secrets"|"secret"|"s")
             generate_secrets
         ;;
+        "outputs"|"output"|"o")
+            generate_outputs
+        ;;
         *)
             generate_inputs
             generate_secrets
+            generate_outputs
         ;;
     esac
-
 }
 
 main "${2:-all}"
