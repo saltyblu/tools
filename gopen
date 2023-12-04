@@ -1,6 +1,12 @@
 #!/bin/bash
 
 _browser=${GOPEN_BROSWER:-'xdg-open'}
+debug=${GOPEN_DEBUG:-'false'}
+
+if [[ "$debug" == 1 ]] || [[ "${debug,,}" == "true" ]]; then
+  set -x
+fi
+
 
 get_os() {
     if uname -a | grep Darwin &>/dev/null; then
@@ -58,21 +64,23 @@ get_os
 
 if git remote &>/dev/null ; then
   git_url=$(git config --get remote.origin.url)
-  _git_url=${git_url%\.git}
-  if [[ ! "$_git_url" =~ ^http* ]]; then
-    _git_url=${_git_url#git@}
-    _git_url=${git_url/:/\/}
-  else
+  if [[ "$git_url" =~ ^http* ]]; then
     _git_url="$git_url"
+  else
+    _git_url=${git_url#git@}
+    _git_url=${_git_url/:/\/}
+    _git_url="https://${_git_url}"
   fi
+
+  _git_url=${_git_url%\.git}
 
   sub_url=${_git_url/*\//}
   if [ -n "$sub_url" ] && [[ "$git_url" =~ "gitlab" ]]; then
-    url="https://${_git_url}${GL_URLPREFIX}"
+    url="${_git_url}${GL_URLPREFIX}"
   elif [ -n "$sub_url" ] && [[ "$_git_url" =~ "github" ]]; then
-    url="https://${_git_url}${GH_URLPREFIX}"
+    url="${_git_url}${GH_URLPREFIX}"
   else
-    url="https://${_git_url}"
+    url="${_git_url}"
   fi
 else
   echo "$PWD - Don't seems to be a git"
